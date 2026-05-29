@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Cash Drop — Novoice</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f0f0; min-height: 100vh; padding: 20px; color: #111; }
+  .card { background: #fff; border-radius: 12px; max-width: 680px; margin: 0 auto; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: #666; margin-bottom: 20px; }
+  .sec { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #999; border-top: 1px solid #eee; padding-top: 14px; margin: 18px 0 12px; }
+  .ts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px; }
+  .ts-box { background: #f5f5f5; border-radius: 8px; padding: 10px 14px; font-size: 15px; font-weight: 600; }
+  .ts-box span { color: #888; font-size: 11px; display: block; margin-bottom: 2px; font-weight: 400; text-transform: uppercase; letter-spacing: .05em; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 500; }
+  input[type=text], input[type=number] {
+    width: 100%; padding: 11px 14px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 16px; background: #fff; color: #111; outline: none; transition: border-color .15s;
+    -webkit-appearance: none;
+  }
+  input:focus { border-color: #555; }
+  .sig-label { font-size: 13px; color: #555; font-weight: 500; margin-bottom: 6px; }
+  canvas {
+    width: 100%; height: 130px; border: 1.5px solid #ddd; border-radius: 8px;
+    background: #fafafa; display: block; touch-action: none; cursor: crosshair;
+  }
+  .sig-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; margin-bottom: 16px; }
+  .sig-name { font-size: 12px; color: #aaa; }
+  .clear-btn { font-size: 12px; color: #888; background: none; border: none; cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 4px; }
+  .clear-btn:hover { color: #333; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; align-items: center; }
+  .btn { padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-primary { background: #111; color: #fff; }
+  .btn-primary:active { opacity: .8; }
+  .btn-secondary { background: #eee; color: #333; }
+  .btn-secondary:active { background: #ddd; }
+  .btn-gmail { background: #EA4335; color: #fff; }
+  .btn-gmail:active { opacity: .8; }
+  .btn-gmail:disabled { background: #ccc; cursor: not-allowed; }
+  #status { font-size: 13px; margin-top: 10px; min-height: 18px; font-weight: 500; }
+  .status-ok  { color: #2a7a2a; }
+  .status-err { color: #c0392b; }
+  .status-inf { color: #555; }
+  .auth-bar { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: #555; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .auth-bar .auth-info { flex: 1; }
+  .auth-bar button { padding: 6px 14px; border-radius: 6px; border: 1px solid #ddd; background: #fff; font-size: 13px; cursor: pointer; }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Cash Drop</h1>
+  <p class="subtitle">Novoice &mdash; date &amp; time recorded automatically</p>
+
+  <div id="auth-bar" class="auth-bar no-print" style="display:none!important;">
+    <span class="auth-info" id="auth-info">Not signed in to Gmail</span>
+    <button onclick="signIn()">Sign in with Google</button>
+  </div>
+
+  <div class="sec">Timestamp</div>
+  <div class="ts-row">
+    <div class="ts-box"><span>Date</span><span id="disp-date">—</span></div>
+    <div class="ts-box"><span>Time</span><span id="disp-time">—</span></div>
+  </div>
+
+  <div class="sec">Ticket &amp; Driver</div>
+  <div class="row2">
+    <div class="field">
+      <label for="ticket">Ticket number</label>
+      <input type="text" id="ticket" placeholder="e.g. TKT-00123" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="driver-num">Driver number</label>
+      <input type="text" id="driver-num" placeholder="e.g. DRV-42" autocomplete="off" />
+    </div>
+  </div>
+  <div class="field">
+    <label for="driver-name">Driver name</label>
+    <input type="text" id="driver-name" placeholder="Full name" autocomplete="off" />
+  </div>
+
+  <div class="sec">Amounts</div>
+  <div class="row2">
+    <div class="field">
+      <label for="invoice-amt">Invoice amount ($)</label>
+      <input type="number" id="invoice-amt" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
+    </div>
+    <div class="field">
+      <label for="change-amt">Change back ($)</label>
+      <input type="number" id="change-amt" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
+    </div>
+  </div>
+
+  <div class="sec">Dispatcher</div>
+  <div class="field">
+    <label for="dispatcher-name">Dispatcher name</label>
+    <input type="text" id="dispatcher-name" placeholder="Full name" autocomplete="off" />
+  </div>
+
+  <div class="sec">Driver Signature</div>
+  <div class="sig-label">Sign below</div>
+  <canvas id="sig-driver"></canvas>
+  <div class="sig-footer">
+    <span class="sig-name" id="lbl-driver"></span>
+    <button class="clear-btn" onclick="clearSig('sig-driver')">&#10005; Clear</button>
+  </div>
+
+  <div class="sec">Dispatcher Signature</div>
+  <div class="sig-label">Sign below</div>
+  <canvas id="sig-dispatch"></canvas>
+  <div class="sig-footer">
+    <span class="sig-name" id="lbl-dispatch"></span>
+    <button class="clear-btn" onclick="clearSig('sig-dispatch')">&#10005; Clear</button>
+  </div>
+
+  <div class="actions no-print">
+    <button class="btn btn-primary" onclick="downloadRecord()">&#8595; Download record</button>
+    <button class="btn btn-gmail" id="btn-send" onclick="sendEmail()" disabled>&#9993; Send to Gmail</button>
+    <button class="btn btn-secondary" onclick="resetForm()">&#8635; New drop</button>
+  </div>
+  <div id="status"></div>
+</div>
+
+<script>
+/* ── Config ─────────────────────────────────────────── */
+var CLIENT_ID   = '543537130125-86284bbj92mqhi82p9vm5b66hrfl8lhc.apps.googleusercontent.com';
+var TO_EMAIL    = 'johnstowing0@gmail.com';
+var SCOPE       = 'https://www.googleapis.com/auth/gmail.send';
+
+/* ── State ──────────────────────────────────────────── */
+var sigCtx = {};
+var sigHas = { 'sig-driver': false, 'sig-dispatch': false };
+var recordedDate = '', recordedTime = '', recordedISO = '';
+var accessToken = null;
+var tokenClient = null;
+
+/* ── Google Identity Services ───────────────────────── */
+function initGoogleAuth() {
+  if (!window.google) { setTimeout(initGoogleAuth, 300); return; }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPE,
+    callback: function(resp) {
+      if (resp.error) { setStatus('Google sign-in failed: ' + resp.error, 'err'); return; }
+      accessToken = resp.access_token;
+      document.getElementById('auth-bar').style.display = 'none';
+      document.getElementById('btn-send').disabled = false;
+      setStatus('Signed in — ready to send.', 'inf');
+      setTimeout(function(){ setStatus('',''); }, 3000);
+    }
+  });
+  document.getElementById('auth-bar').style.removeProperty('display');
+}
+
+function signIn() {
+  if (tokenClient) tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+/* Auto-init once GSI script loads */
+window.addEventListener('load', function() {
+  stampTime();
+  initCanvas('sig-driver');
+  initCanvas('sig-dispatch');
+  initGoogleAuth();
+});
+
+/* ── Canvas / Signature ─────────────────────────────── */
+function initCanvas(id) {
+  var c = document.getElementById(id);
+  var dpr = window.devicePixelRatio || 1;
+  var rect = c.getBoundingClientRect();
+  c.width  = Math.round(rect.width  * dpr);
+  c.height = Math.round(rect.height * dpr);
+  var ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth   = 2.5;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  sigCtx[id] = ctx;
+  var drawing = false;
+  function getPos(e) {
+    var r = c.getBoundingClientRect(), s = e.touches ? e.touches[0] : e;
+    return { x: s.clientX - r.left, y: s.clientY - r.top };
+  }
+  c.addEventListener('mousedown',  function(e){ drawing=true; var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+  c.addEventListener('mousemove',  function(e){ if(!drawing) return; var p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); sigHas[id]=true; });
+  c.addEventListener('mouseup',    function(){ drawing=false; });
+  c.addEventListener('mouseleave', function(){ drawing=false; });
+  c.addEventListener('touchstart', function(e){ e.preventDefault(); drawing=true; var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }, {passive:false});
+  c.addEventListener('touchmove',  function(e){ e.preventDefault(); if(!drawing) return; var p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); sigHas[id]=true; }, {passive:false});
+  c.addEventListener('touchend',   function(){ drawing=false; });
+}
+
+function clearSig(id) {
+  var c = document.getElementById(id), dpr = window.devicePixelRatio||1;
+  sigCtx[id].clearRect(0, 0, c.width/dpr, c.height/dpr);
+  sigHas[id] = false;
+}
+
+/* ── Helpers ────────────────────────────────────────── */
+function stampTime() {
+  var now = new Date();
+  recordedISO  = now.toISOString();
+  recordedDate = now.toLocaleDateString('en-US', {weekday:'short', year:'numeric', month:'short', day:'numeric'});
+  recordedTime = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  document.getElementById('disp-date').textContent = recordedDate;
+  document.getElementById('disp-time').textContent = recordedTime;
+}
+
+function v(id) { var el=document.getElementById(id); return el ? el.value.trim() : ''; }
+
+function setStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type === 'ok' ? 'status-ok' : type === 'err' ? 'status-err' : 'status-inf';
+}
+
+function updateSigLabels() {
+  document.getElementById('lbl-driver').textContent   = v('driver-name')     ? 'Driver: '     + v('driver-name')     : '';
+  document.getElementById('lbl-dispatch').textContent = v('dispatcher-name') ? 'Dispatcher: ' + v('dispatcher-name') : '';
+}
+['driver-name','dispatcher-name'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', updateSigLabels);
+});
+
+/* ── Build the record HTML ──────────────────────────── */
+function buildRecordHTML() {
+  var invoice = parseFloat(v('invoice-amt')) || 0;
+  var change  = parseFloat(v('change-amt'))  || 0;
+  var dSig    = sigHas['sig-driver']   ? document.getElementById('sig-driver').toDataURL('image/png')   : null;
+  var disSig  = sigHas['sig-dispatch'] ? document.getElementById('sig-dispatch').toDataURL('image/png') : null;
+
+  function sigBox(label, name, data) {
+    return '<div class="sig-box">'
+      + '<div class="sig-label">' + label + '</div>'
+      + (data ? '<img src="' + data + '" alt="' + label + '">' : '<div class="no-sig">No signature captured</div>')
+      + '<div class="sig-line">Name: ' + (name || '________________________________') + '</div>'
+      + '</div>';
+  }
+
+  return '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>Cash Drop \u2014 ' + (v('ticket') || 'Record') + '</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;max-width:640px;margin:32px auto;padding:0 20px;color:#111;}'
+    + 'h1{font-size:20px;margin-bottom:2px;}.meta{color:#777;font-size:13px;margin-bottom:18px;}'
+    + '.ts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}'
+    + '.ts-box{background:#f5f5f5;border-radius:8px;padding:10px 14px;}'
+    + '.ts-box span{color:#888;font-size:11px;display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;}'
+    + '.ts-box strong{font-size:14px;}'
+    + 'table{width:100%;border-collapse:collapse;margin-bottom:18px;}'
+    + 'td{padding:8px 10px;border-bottom:1px solid #eee;font-size:14px;}'
+    + 'td:first-child{color:#555;width:48%;}td:last-child{font-weight:600;}'
+    + '.sec{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#bbb;padding:14px 10px 4px;}'
+    + '.sig-box{border:1px solid #ddd;border-radius:8px;padding:12px 14px;margin-bottom:14px;}'
+    + '.sig-label{font-size:12px;color:#555;font-weight:700;margin-bottom:6px;}'
+    + '.sig-box img{max-width:100%;display:block;max-height:110px;border-radius:4px;}'
+    + '.no-sig{color:#bbb;font-size:13px;font-style:italic;padding:8px 0;}'
+    + '.sig-line{border-top:1px solid #eee;margin-top:10px;padding-top:7px;font-size:12px;color:#666;}'
+    + '.print-btn{margin-top:16px;padding:9px 20px;font-size:14px;cursor:pointer;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;}'
+    + '@media print{.print-btn{display:none;}}'
+    + '</style></head><body>'
+    + '<h1>Cash Drop Record</h1>'
+    + '<div class="meta">Ticket: ' + (v('ticket') || '&mdash;') + '</div>'
+    + '<div class="ts-row">'
+    + '<div class="ts-box"><span>Date</span><strong>' + recordedDate + '</strong></div>'
+    + '<div class="ts-box"><span>Time</span><strong>' + recordedTime + '</strong></div>'
+    + '</div>'
+    + '<table>'
+    + '<tr><td class="sec" colspan="2">Ticket &amp; Driver</td></tr>'
+    + '<tr><td>Ticket number</td><td>' + (v('ticket')||'&mdash;') + '</td></tr>'
+    + '<tr><td>Driver name</td><td>'   + (v('driver-name')||'&mdash;') + '</td></tr>'
+    + '<tr><td>Driver number</td><td>' + (v('driver-num')||'&mdash;') + '</td></tr>'
+    + '<tr><td class="sec" colspan="2">Amounts</td></tr>'
+    + '<tr><td>Invoice amount</td><td>$' + invoice.toFixed(2) + '</td></tr>'
+    + '<tr><td>Change back</td><td>$'    + change.toFixed(2)  + '</td></tr>'
+    + '<tr><td class="sec" colspan="2">Dispatcher</td></tr>'
+    + '<tr><td>Dispatcher name</td><td>' + (v('dispatcher-name')||'&mdash;') + '</td></tr>'
+    + '</table>'
+    + sigBox('Driver signature',     v('driver-name'),     dSig)
+    + sigBox('Dispatcher signature', v('dispatcher-name'), disSig)
+    + '<button class="print-btn" onclick="window.print()">&#128438; Print / Save as PDF</button>'
+    + '</body></html>';
+}
+
+/* ── Download ───────────────────────────────────────── */
+function downloadRecord() {
+  var ticket = v('ticket') || recordedISO.replace(/[:.]/g,'-').slice(0,19);
+  var fname  = 'cash-drop-' + ticket.replace(/\s+/g,'-') + '.html';
+  var blob   = new Blob([buildRecordHTML()], {type:'text/html'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setStatus('\u2713 Downloaded: ' + fname, 'ok');
+  setTimeout(function(){ setStatus('',''); }, 5000);
+}
+
+/* ── Send via Gmail API ─────────────────────────────── */
+function sendEmail() {
+  if (!accessToken) { signIn(); return; }
+
+  setStatus('Preparing email\u2026', 'inf');
+
+  var ticket  = v('ticket') || recordedISO.slice(0,10);
+  var fname   = 'cash-drop-' + ticket.replace(/\s+/g,'-') + '.html';
+  var subject = 'Cash Drop Record \u2014 ' + (v('ticket') ? 'Ticket ' + v('ticket') : recordedDate);
+  var body    = 'Cash drop record attached.\n\nTicket: ' + (v('ticket')||'—')
+              + '\nDriver: ' + (v('driver-name')||'—') + ' (' + (v('driver-num')||'—') + ')'
+              + '\nInvoice: $' + (parseFloat(v('invoice-amt'))||0).toFixed(2)
+              + '\nChange back: $' + (parseFloat(v('change-amt'))||0).toFixed(2)
+              + '\nDispatcher: ' + (v('dispatcher-name')||'—')
+              + '\nDate: ' + recordedDate + ' ' + recordedTime;
+
+  var attachmentData = btoa(unescape(encodeURIComponent(buildRecordHTML())));
+
+  /* Build RFC 2822 multipart message */
+  var boundary = 'CashDrop_' + Date.now();
+  var nl = '\r\n';
+  var raw =
+      'To: ' + TO_EMAIL + nl
+    + 'Subject: ' + subject + nl
+    + 'MIME-Version: 1.0' + nl
+    + 'Content-Type: multipart/mixed; boundary="' + boundary + '"' + nl
+    + nl
+    + '--' + boundary + nl
+    + 'Content-Type: text/plain; charset="UTF-8"' + nl
+    + nl
+    + body + nl
+    + nl
+    + '--' + boundary + nl
+    + 'Content-Type: text/html; name="' + fname + '"' + nl
+    + 'Content-Disposition: attachment; filename="' + fname + '"' + nl
+    + 'Content-Transfer-Encoding: base64' + nl
+    + nl
+    + attachmentData + nl
+    + '--' + boundary + '--';
+
+  /* Base64url encode the whole message */
+  var encoded = btoa(unescape(encodeURIComponent(raw)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raw: encoded })
+  })
+  .then(function(res) {
+    if (res.ok) {
+      setStatus('\u2713 Email sent to ' + TO_EMAIL, 'ok');
+      setTimeout(function(){ setStatus('',''); }, 6000);
+    } else {
+      return res.json().then(function(e) {
+        var msg = (e.error && e.error.message) || res.status;
+        if (res.status === 401) {
+          accessToken = null;
+          document.getElementById('btn-send').disabled = true;
+          document.getElementById('auth-bar').style.removeProperty('display');
+          setStatus('Session expired — please sign in again.', 'err');
+        } else {
+          setStatus('Send failed: ' + msg, 'err');
+        }
+      });
+    }
+  })
+  .catch(function(err) { setStatus('Network error: ' + err.message, 'err'); });
+}
+
+/* ── Reset ──────────────────────────────────────────── */
+function resetForm() {
+  ['ticket','driver-name','driver-num','invoice-amt','change-amt','dispatcher-name'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  clearSig('sig-driver');
+  clearSig('sig-dispatch');
+  updateSigLabels();
+  stampTime();
+  setStatus('','');
+}
+</script>
+</body>
+</html>
