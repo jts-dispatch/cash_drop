@@ -347,7 +347,21 @@ function downloadRecord() {
 function sendEmail() {
   if (!accessToken) { signIn(); return; }
 
-  setStatus('Preparing email\u2026', 'inf');
+  /* ── Validation ── */
+  var missing = [];
+  if (!v('ticket'))          missing.push('Ticket number');
+  if (!v('driver-num'))      missing.push('Driver');
+  if (!v('invoice-amt'))     missing.push('Invoice amount');
+  if (!v('dispatcher-name')) missing.push('Dispatcher');
+  if (!sigHas['sig-driver'])   missing.push('Driver signature');
+  if (!sigHas['sig-dispatch']) missing.push('Dispatcher signature');
+
+  if (missing.length) {
+    setStatus('⚠ Required: ' + missing.join(', '), 'err');
+    return;
+  }
+
+  setStatus('Preparing email…', 'inf');
 
   var ticket  = v('ticket') || recordedISO.slice(0,10);
   var fname   = 'cash-drop-' + ticket.replace(/\s+/g,'-') + '.html';
