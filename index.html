@@ -15,15 +15,21 @@
   .ts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px; }
   .ts-box { background: #f5f5f5; border-radius: 8px; padding: 10px 14px; font-size: 15px; font-weight: 600; }
   .ts-box span { color: #888; font-size: 11px; display: block; margin-bottom: 2px; font-weight: 400; text-transform: uppercase; letter-spacing: .05em; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .field { margin-bottom: 14px; }
   label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 500; }
-  input[type=text], input[type=number] {
+  input[type=text], input[type=number], select {
     width: 100%; padding: 11px 14px; border: 1.5px solid #ddd; border-radius: 8px;
     font-size: 16px; background: #fff; color: #111; outline: none; transition: border-color .15s;
-    -webkit-appearance: none;
+    -webkit-appearance: none; appearance: none;
   }
-  input:focus { border-color: #555; }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  input:focus, select:focus { border-color: #555; }
   .sig-label { font-size: 13px; color: #555; font-weight: 500; margin-bottom: 6px; }
   canvas {
     width: 100%; height: 130px; border: 1.5px solid #ddd; border-radius: 8px;
@@ -70,23 +76,33 @@
   </div>
 
   <div class="sec">Ticket &amp; Driver</div>
-  <div class="row2">
-    <div class="field">
-      <label for="ticket">Ticket number</label>
-      <input type="text" id="ticket" placeholder="e.g. TKT-00123" autocomplete="off" />
-    </div>
-    <div class="field">
-      <label for="driver-num">Driver number</label>
-      <input type="text" id="driver-num" placeholder="e.g. DRV-42" autocomplete="off" />
-    </div>
+  <div class="field">
+    <label for="ticket">Ticket number</label>
+    <input type="text" id="ticket" placeholder="e.g. 98765" autocomplete="off" />
   </div>
   <div class="field">
-    <label for="driver-name">Driver name</label>
-    <input type="text" id="driver-name" placeholder="Full name" autocomplete="off" />
+    <label for="driver-select">Driver</label>
+    <select id="driver-select" onchange="onDriverSelect()">
+      <option value="">— Select driver —</option>
+      <option value="J1|Rob">J1 — Rob</option>
+      <option value="J4|Chris">J4 — Chris</option>
+      <option value="J7|Mike">J7 — Mike</option>
+      <option value="J10|Jeremy">J10 — Jeremy</option>
+      <option value="J11|David">J11 — David</option>
+      <option value="J12|Luke">J12 — Luke</option>
+      <option value="J16|Luis">J16 — Luis</option>
+      <option value="J17|Aaron">J17 — Aaron</option>
+      <option value="J18|Kayo">J18 — Kayo</option>
+      <option value="J19|Terry">J19 — Terry</option>
+      <option value="J21|Manuel">J21 — Manuel</option>
+    </select>
+    <!-- hidden fields populated by the dropdown, used by buildRecordHTML -->
+    <input type="hidden" id="driver-num" />
+    <input type="hidden" id="driver-name" />
   </div>
 
   <div class="sec">Amounts</div>
-  <div class="row2">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
     <div class="field">
       <label for="invoice-amt">Invoice amount ($)</label>
       <input type="number" id="invoice-amt" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
@@ -99,8 +115,17 @@
 
   <div class="sec">Dispatcher</div>
   <div class="field">
-    <label for="dispatcher-name">Dispatcher name</label>
-    <input type="text" id="dispatcher-name" placeholder="Full name" autocomplete="off" />
+    <label for="dispatcher-select">Dispatcher name</label>
+    <select id="dispatcher-select" onchange="onDispatcherSelect()">
+      <option value="">— Select dispatcher —</option>
+      <option value="Timm">Timm</option>
+      <option value="Renee">Renee</option>
+      <option value="Janet">Janet</option>
+      <option value="Veronica">Veronica</option>
+      <option value="Josh">Josh</option>
+      <option value="Lane">Lane</option>
+    </select>
+    <input type="hidden" id="dispatcher-name" />
   </div>
 
   <div class="sec">Driver Signature</div>
@@ -120,8 +145,7 @@
   </div>
 
   <div class="actions no-print">
-    <button class="btn btn-primary" onclick="downloadRecord()">&#8595; Download record</button>
-    <button class="btn btn-gmail" id="btn-send" onclick="sendEmail()" disabled>&#9993; Send to Gmail</button>
+<button class="btn btn-gmail" id="btn-send" onclick="sendEmail()" disabled>&#9993; Send to Gmail</button>
     <button class="btn btn-secondary" onclick="resetForm()">&#8635; New drop</button>
   </div>
   <div id="status"></div>
@@ -129,9 +153,9 @@
 
 <script>
 /* ── Config ─────────────────────────────────────────── */
-var CLIENT_ID   = '543537130125-86284bbj92mqhi82p9vm5b66hrfl8lhc.apps.googleusercontent.com';
-var TO_EMAIL    = 'johnstowing0@gmail.com';
-var SCOPE       = 'https://www.googleapis.com/auth/gmail.send';
+var CLIENT_ID = '543537130125-86284bbj92mqhi82p9vm5b66hrfl8lhc.apps.googleusercontent.com';
+var TO_EMAIL  = 'johnstowing0@gmail.com';
+var SCOPE     = 'https://www.googleapis.com/auth/gmail.send';
 
 /* ── State ──────────────────────────────────────────── */
 var sigCtx = {};
@@ -139,6 +163,21 @@ var sigHas = { 'sig-driver': false, 'sig-dispatch': false };
 var recordedDate = '', recordedTime = '', recordedISO = '';
 var accessToken = null;
 var tokenClient = null;
+
+/* ── Dropdown handlers ──────────────────────────────── */
+function onDriverSelect() {
+  var val = document.getElementById('driver-select').value; // e.g. "J1|Rob"
+  var parts = val ? val.split('|') : ['', ''];
+  document.getElementById('driver-num').value  = parts[0] || '';
+  document.getElementById('driver-name').value = parts[1] || '';
+  updateSigLabels();
+}
+
+function onDispatcherSelect() {
+  var val = document.getElementById('dispatcher-select').value;
+  document.getElementById('dispatcher-name').value = val;
+  updateSigLabels();
+}
 
 /* ── Google Identity Services ───────────────────────── */
 function initGoogleAuth() {
@@ -162,7 +201,6 @@ function signIn() {
   if (tokenClient) tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
-/* Auto-init once GSI script loads */
 window.addEventListener('load', function() {
   stampTime();
   initCanvas('sig-driver');
@@ -223,12 +261,11 @@ function setStatus(msg, type) {
 }
 
 function updateSigLabels() {
-  document.getElementById('lbl-driver').textContent   = v('driver-name')     ? 'Driver: '     + v('driver-name')     : '';
+  var driverLabel = v('driver-num') && v('driver-name')
+    ? v('driver-num') + ' — ' + v('driver-name') : '';
+  document.getElementById('lbl-driver').textContent   = driverLabel ? 'Driver: ' + driverLabel : '';
   document.getElementById('lbl-dispatch').textContent = v('dispatcher-name') ? 'Dispatcher: ' + v('dispatcher-name') : '';
 }
-['driver-name','dispatcher-name'].forEach(function(id){
-  document.getElementById(id).addEventListener('input', updateSigLabels);
-});
 
 /* ── Build the record HTML ──────────────────────────── */
 function buildRecordHTML() {
@@ -244,6 +281,10 @@ function buildRecordHTML() {
       + '<div class="sig-line">Name: ' + (name || '________________________________') + '</div>'
       + '</div>';
   }
+
+  var driverDisplay = v('driver-num') && v('driver-name')
+    ? v('driver-num') + ' — ' + v('driver-name')
+    : (v('driver-num') || v('driver-name') || '&mdash;');
 
   return '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8">'
     + '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -276,15 +317,14 @@ function buildRecordHTML() {
     + '<table>'
     + '<tr><td class="sec" colspan="2">Ticket &amp; Driver</td></tr>'
     + '<tr><td>Ticket number</td><td>' + (v('ticket')||'&mdash;') + '</td></tr>'
-    + '<tr><td>Driver name</td><td>'   + (v('driver-name')||'&mdash;') + '</td></tr>'
-    + '<tr><td>Driver number</td><td>' + (v('driver-num')||'&mdash;') + '</td></tr>'
+    + '<tr><td>Driver</td><td>' + driverDisplay + '</td></tr>'
     + '<tr><td class="sec" colspan="2">Amounts</td></tr>'
     + '<tr><td>Invoice amount</td><td>$' + invoice.toFixed(2) + '</td></tr>'
     + '<tr><td>Change back</td><td>$'    + change.toFixed(2)  + '</td></tr>'
     + '<tr><td class="sec" colspan="2">Dispatcher</td></tr>'
     + '<tr><td>Dispatcher name</td><td>' + (v('dispatcher-name')||'&mdash;') + '</td></tr>'
     + '</table>'
-    + sigBox('Driver signature',     v('driver-name'),     dSig)
+    + sigBox('Driver signature',     driverDisplay,        dSig)
     + sigBox('Dispatcher signature', v('dispatcher-name'), disSig)
     + '<button class="print-btn" onclick="window.print()">&#128438; Print / Save as PDF</button>'
     + '</body></html>';
@@ -312,8 +352,10 @@ function sendEmail() {
   var ticket  = v('ticket') || recordedISO.slice(0,10);
   var fname   = 'cash-drop-' + ticket.replace(/\s+/g,'-') + '.html';
   var subject = 'Cash Drop Record \u2014 ' + (v('ticket') ? 'Ticket ' + v('ticket') : recordedDate);
+  var driverDisplay = v('driver-num') && v('driver-name')
+    ? v('driver-num') + ' — ' + v('driver-name') : (v('driver-name') || '—');
   var body    = 'Cash drop record attached.\n\nTicket: ' + (v('ticket')||'—')
-              + '\nDriver: ' + (v('driver-name')||'—') + ' (' + (v('driver-num')||'—') + ')'
+              + '\nDriver: ' + driverDisplay
               + '\nInvoice: $' + (parseFloat(v('invoice-amt'))||0).toFixed(2)
               + '\nChange back: $' + (parseFloat(v('change-amt'))||0).toFixed(2)
               + '\nDispatcher: ' + (v('dispatcher-name')||'—')
@@ -321,7 +363,6 @@ function sendEmail() {
 
   var attachmentData = btoa(unescape(encodeURIComponent(buildRecordHTML())));
 
-  /* Build RFC 2822 multipart message */
   var boundary = 'CashDrop_' + Date.now();
   var nl = '\r\n';
   var raw =
@@ -343,7 +384,6 @@ function sendEmail() {
     + attachmentData + nl
     + '--' + boundary + '--';
 
-  /* Base64url encode the whole message */
   var encoded = btoa(unescape(encodeURIComponent(raw)))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -358,7 +398,7 @@ function sendEmail() {
   .then(function(res) {
     if (res.ok) {
       setStatus('\u2713 Email sent to ' + TO_EMAIL, 'ok');
-      setTimeout(function(){ setStatus('',''); }, 6000);
+      setTimeout(function(){ resetForm(); setStatus('\u2713 Sent — form cleared.', 'ok'); setTimeout(function(){ setStatus('',''); }, 3000); }, 1500);
     } else {
       return res.json().then(function(e) {
         var msg = (e.error && e.error.message) || res.status;
@@ -378,9 +418,14 @@ function sendEmail() {
 
 /* ── Reset ──────────────────────────────────────────── */
 function resetForm() {
-  ['ticket','driver-name','driver-num','invoice-amt','change-amt','dispatcher-name'].forEach(function(id){
+  ['ticket','invoice-amt','change-amt'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
+  document.getElementById('driver-select').value = '';
+  document.getElementById('dispatcher-select').value = '';
+  document.getElementById('driver-num').value = '';
+  document.getElementById('driver-name').value = '';
+  document.getElementById('dispatcher-name').value = '';
   clearSig('sig-driver');
   clearSig('sig-dispatch');
   updateSigLabels();
