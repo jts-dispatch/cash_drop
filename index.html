@@ -308,7 +308,7 @@ function buildRecordHTML() {
     + '.print-btn{margin-top:16px;padding:9px 20px;font-size:14px;cursor:pointer;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;}'
     + '@media print{.print-btn{display:none;}}'
     + '</style></head><body>'
-    + '<h1>Cash Drop Record</h1>'
+    + '<h1>Cash Drop Record </h1>'
     + '<div class="meta">Ticket: ' + (v('ticket') || '&mdash;') + '</div>'
     + '<div class="ts-row">'
     + '<div class="ts-box"><span>Date</span><strong>' + recordedDate + '</strong></div>'
@@ -365,7 +365,7 @@ function sendEmail() {
 
   var ticket  = v('ticket') || recordedISO.slice(0,10);
   var fname   = 'cash-drop-' + ticket.replace(/\s+/g,'-') + '.html';
-  var subject = 'Cash Drop Record' + (v('ticket') ? 'Ticket ' + v('ticket') : recordedDate);
+  var subject = 'Cash Drop Record ' + (v('ticket') ? 'Ticket ' + v('ticket') : recordedDate);
   var driverDisplay = v('driver-num') && v('driver-name')
     ? v('driver-num') + ' — ' + v('driver-name') : (v('driver-name') || '—');
   var body    = 'Cash drop record attached.\n\nTicket: ' + (v('ticket')||'—')
