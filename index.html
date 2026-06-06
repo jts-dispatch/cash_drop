@@ -365,7 +365,7 @@ function sendEmail() {
 
   var ticket  = v('ticket') || recordedISO.slice(0,10);
   var fname   = 'cash-drop-' + ticket.replace(/\s+/g,'-') + '.html';
-  var subject = 'Cash Drop Record \u2014 ' + (v('ticket') ? 'Ticket ' + v('ticket') : recordedDate);
+  var subject = 'Cash Drop Record' + (v('ticket') ? 'Ticket ' + v('ticket') : recordedDate);
   var driverDisplay = v('driver-num') && v('driver-name')
     ? v('driver-num') + ' — ' + v('driver-name') : (v('driver-name') || '—');
   var body    = 'Cash drop record attached.\n\nTicket: ' + (v('ticket')||'—')
